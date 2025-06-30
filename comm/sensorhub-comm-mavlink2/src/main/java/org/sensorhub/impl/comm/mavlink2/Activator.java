@@ -8,24 +8,20 @@ Software distributed under the License is distributed on an "AS IS" basis,
 WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
 for the specific language governing rights and limitations under the License.
  
-Copyright (C) 2012-2016 Sensia Software LLC. All Rights Reserved.
+Copyright (C) 2021 Sensia Software LLC. All Rights Reserved.
  
 ******************************* END LICENSE BLOCK ***************************/
 
-package org.sensorhub.impl.comm.zeroconf;
+package org.sensorhub.impl.comm.mavlink2;
 
-import org.sensorhub.api.comm.NetworkConfig;
-import org.sensorhub.api.config.DisplayInfo;
+import org.osgi.framework.BundleActivator;
+import org.sensorhub.utils.OshBundleActivator;
 
 
-public class IpNetworkConfig extends NetworkConfig
+/*
+ * Needed to expose java services as OSGi services
+ */
+public class Activator extends OshBundleActivator implements BundleActivator
 {
 
-    @DisplayInfo(desc="Name or IP address of the network interface to use to connect to this network")
-    public String networkInterface;
-    
-    
-    @DisplayInfo(desc="Service name advertised with ZeroConf protocol")
-    public String zeroConfHostName = "OSH";
-    
 }

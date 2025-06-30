@@ -12,7 +12,7 @@ Copyright (C) 2012-2015 Sensia Software LLC. All Rights Reserved.
  
 ******************************* END LICENSE BLOCK ***************************/
 
-package org.sensorhub.impl.comm.zeroconf;
+package org.sensorhub.impl.comm.mavlink2;
 
 import org.sensorhub.api.comm.ICommNetwork.NetworkType;
 import org.sensorhub.api.comm.INetworkProvider;
@@ -26,13 +26,13 @@ public class IpNetworkProvider implements INetworkProvider
     @Override
     public String getModuleName()
     {
-        return "IP Network (ZeroConf)";
+        return "MAVLink";
     }
 
     @Override
     public String getModuleDescription()
     {
-        return "IP network(s) service with ZeroConf support";
+        return "Connections with MAVLink support";
     }
 
     @Override
@@ -44,7 +44,7 @@ public class IpNetworkProvider implements INetworkProvider
     @Override
     public String getProviderName()
     {
-        return "Sensia Software LLC";
+        return "Botts Innovative Research";
     }
 
     @Override

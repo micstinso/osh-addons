@@ -1,5 +1,5 @@
-description = 'ZeroConf IP Network'
-ext.details = 'ZeroConf IP network adapter based on JmDNS'
+description = 'MAVLink Connection'
+ext.details = 'MAVLink adapter'
 
 dependencies{
   implementation 'org.sensorhub:sensorhub-core:' + oshCoreVersion
@@ -7,7 +7,7 @@ dependencies{
 
 osgi {
   manifest {
-    attributes('Bundle-Vendor': 'Sensia Software LLC')
-    attributes('Bundle-Activator': 'org.sensorhub.impl.comm.zeroconf.Activator')
+    attributes('Bundle-Vendor': 'Botts Innovative Research')
+    attributes('Bundle-Activator': 'org.sensorhub.impl.comm.mavlink2.Activator')
   }
 }

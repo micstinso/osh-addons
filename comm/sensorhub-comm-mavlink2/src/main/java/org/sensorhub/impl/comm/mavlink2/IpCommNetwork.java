@@ -7,12 +7,12 @@ at http://mozilla.org/MPL/2.0/.
 Software distributed under the License is distributed on an "AS IS" basis,
 WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
 for the specific language governing rights and limitations under the License.
- 
+
 Copyright (C) 2012-2016 Sensia Software LLC. All Rights Reserved.
- 
+
 ******************************* END LICENSE BLOCK ***************************/
 
-package org.sensorhub.impl.comm.zeroconf;
+package org.sensorhub.impl.comm.mavlink2;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -268,10 +268,16 @@ public class IpCommNetwork extends AbstractModule<IpNetworkConfig> implements IC
                     final String mac;
                     StringBuilder buf = new StringBuilder();
                     byte[] bytes = netInt.getHardwareAddress();
-                    for (byte b: bytes)
-                        buf.append(String.format("%02X", b)).append(':');
-                    mac = buf.substring(0, buf.length()-1);
-                    
+                    if (bytes != null)
+                    {
+                        for (byte b: bytes)
+                            buf.append(String.format("%02X", b)).append(':');
+                        mac = buf.substring(0, buf.length()-1);
+                    }
+                    // If interface is loopback, VPN, or other non-physical interface, it won't have physical address in some operating systems
+                    else
+                    mac = "NONE";
+
                     // IP address
                     Enumeration<InetAddress> ipList = netInt.getInetAddresses();
                     InetAddress ipAdd = getDefaultInetAddress(ipList);
@@ -347,7 +353,7 @@ public class IpCommNetwork extends AbstractModule<IpNetworkConfig> implements IC
         }
         catch (IOException e)
         {
-            throw new SensorHubException("Error while starting ZeroConf service", e);
+            throw new SensorHubException("Error while starting ZeroConf MAVLink service", e);
         }
     }
 
