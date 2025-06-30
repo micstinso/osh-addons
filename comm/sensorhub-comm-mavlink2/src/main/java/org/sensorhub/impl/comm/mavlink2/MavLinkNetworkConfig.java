@@ -13,18 +13,14 @@ Copyright (C) 2012-2016 Sensia Software LLC. All Rights Reserved.
 ******************************* END LICENSE BLOCK ***************************/
 
 package org.sensorhub.impl.comm.mavlink2;
-
 import org.sensorhub.api.comm.NetworkConfig;
 import org.sensorhub.api.config.DisplayInfo;
 
-
-public class IpNetworkConfig extends NetworkConfig
+public class MavLinkNetworkConfig extends NetworkConfig
 {
-
     @DisplayInfo(desc="Name or IP address of the network interface to use to connect to this network")
     public String networkInterface;
-    
-    
+
     @DisplayInfo(desc="Service name advertised with ZeroConf protocol")
     public String zeroConfHostName = "OSH";
     

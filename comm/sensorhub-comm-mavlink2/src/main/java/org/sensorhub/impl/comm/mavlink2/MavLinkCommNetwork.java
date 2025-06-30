@@ -9,6 +9,7 @@ WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
 for the specific language governing rights and limitations under the License.
 
 Copyright (C) 2012-2016 Sensia Software LLC. All Rights Reserved.
+Copyright (C) 2025 Botts Innovative Research. All Rights Reserved.
 
 ******************************* END LICENSE BLOCK ***************************/
 
@@ -48,23 +49,23 @@ import org.slf4j.LoggerFactory;
 
 /**
  * <p>
- * Network implementation for IP based networks, with support for ZeroConf
- * provided by the jmDNS library.
+ * Network implementation for MAVLink networks
+ * provided by the MAVSDK Library
  * </p>
  *
+ * @author Michael Stinson
  * @author Alex Robin
  * @since Feb 10, 2016
  */
-public class IpCommNetwork extends AbstractModule<IpNetworkConfig> implements ICommNetwork<IpNetworkConfig>
+public class MavLinkCommNetwork extends AbstractModule<MavLinkNetworkConfig> implements ICommNetwork<MavLinkNetworkConfig>
 {
-    private static final Logger log = LoggerFactory.getLogger(IpCommNetwork.class); 
+    private static final Logger log = LoggerFactory.getLogger(MavLinkCommNetwork.class);
     
     NetworkInterface netInterface;
-    ZeroConfDeviceScanner scanner;
+    MavLinkScanner scanner;
     JmDNS jmdns;
-    
-        
-    class ZeroConfDeviceScanner implements IDeviceScanner
+
+    class MavLinkScanner implements IDeviceScanner
     {
         volatile boolean scanning;
         ServiceTypeListener sTypeListener;
@@ -294,7 +295,7 @@ public class IpCommNetwork extends AbstractModule<IpNetworkConfig> implements IC
                         @Override
                         public NetworkType getNetworkType()
                         {
-                            return IpCommNetwork.this.getNetworkType(netInt);
+                            return MavLinkCommNetwork.this.getNetworkType(netInt);
                         }
 
                         @Override
@@ -417,7 +418,7 @@ public class IpCommNetwork extends AbstractModule<IpNetworkConfig> implements IC
     public IDeviceScanner getDeviceScanner()
     {
         if (scanner == null)
-            scanner = new ZeroConfDeviceScanner();
+            scanner = new MavLinkScanner();
         return scanner;
     }
 

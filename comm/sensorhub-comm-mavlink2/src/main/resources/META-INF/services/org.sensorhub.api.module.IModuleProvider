@@ -1,1 +1,1 @@
-org.sensorhub.impl.comm.mavlink2.IpNetworkProvider
+org.sensorhub.impl.comm.mavlink2.MavLinkNetworkProvider
