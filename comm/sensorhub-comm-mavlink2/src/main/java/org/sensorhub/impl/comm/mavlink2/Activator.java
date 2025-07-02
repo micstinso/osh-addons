@@ -14,14 +14,13 @@ Copyright (C) 2021 Sensia Software LLC. All Rights Reserved.
 
 package org.sensorhub.impl.comm.mavlink2;
 
-import org.osgi.framework.BundleActivator;
 import org.sensorhub.utils.OshBundleActivator;
 
 
 /*
  * Needed to expose java services as OSGi services
  */
-public class Activator extends OshBundleActivator implements BundleActivator
+public class Activator extends OshBundleActivator
 {
 
 }

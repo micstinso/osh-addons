@@ -32,7 +32,7 @@ public class MavLinkNetworkProvider implements INetworkProvider
     @Override
     public String getModuleDescription()
     {
-        return "Connections with MAVLink support";
+        return "MAVLink connections";
     }
 
     @Override

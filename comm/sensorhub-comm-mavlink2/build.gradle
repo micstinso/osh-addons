@@ -3,6 +3,7 @@ ext.details = 'MAVLink adapter'
 
 dependencies{
   implementation 'org.sensorhub:sensorhub-core:' + oshCoreVersion
+  implementation 'io.mavsdk:mavsdk:3.0.0'
 }
 
 osgi {

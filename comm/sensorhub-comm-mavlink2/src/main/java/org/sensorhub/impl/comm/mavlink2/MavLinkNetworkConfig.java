@@ -20,8 +20,4 @@ public class MavLinkNetworkConfig extends NetworkConfig
 {
     @DisplayInfo(desc="Name or IP address of the network interface to use to connect to this network")
     public String networkInterface;
-
-    @DisplayInfo(desc="Service name advertised with ZeroConf protocol")
-    public String zeroConfHostName = "OSH";
-    
 }

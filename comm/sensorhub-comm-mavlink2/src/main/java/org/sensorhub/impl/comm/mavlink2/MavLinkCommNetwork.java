@@ -15,24 +15,14 @@ Copyright (C) 2025 Botts Innovative Research. All Rights Reserved.
 
 package org.sensorhub.impl.comm.mavlink2;
 
-import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-import javax.jmdns.JmDNS;
-import javax.jmdns.ServiceEvent;
-import javax.jmdns.ServiceInfo;
-import javax.jmdns.ServiceListener;
-import javax.jmdns.ServiceTypeListener;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.sensorhub.api.comm.ICommConfig;
 import org.sensorhub.api.comm.IDeviceInfo;
 import org.sensorhub.api.comm.ICommNetwork;
@@ -40,12 +30,23 @@ import org.sensorhub.api.comm.IDeviceScanCallback;
 import org.sensorhub.api.comm.IDeviceScanner;
 import org.sensorhub.api.comm.INetworkInfo;
 import org.sensorhub.api.common.SensorHubException;
-import org.sensorhub.impl.comm.TCPConfig;
+import org.sensorhub.api.module.IModule;
+import org.sensorhub.api.module.IModuleProvider;
+import org.sensorhub.api.module.ModuleConfig;
+import org.sensorhub.api.sensor.SensorConfig;
+import org.sensorhub.api.system.ISystemDriverRegistry;
+import org.sensorhub.impl.SensorHub;
 import org.sensorhub.impl.comm.UDPConfig;
 import org.sensorhub.impl.module.AbstractModule;
+import org.sensorhub.impl.module.ModuleRegistry;
+import org.sensorhub.impl.sensor.AbstractSensorModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+//import io.mavsdk.telemetry.Telemetry;
+//import io.mavsdk.action.Action;
+//import io.mavsdk.camera.Camera;
+import io.mavsdk.core.Core;
 
 /**
  * <p>
@@ -63,163 +64,146 @@ public class MavLinkCommNetwork extends AbstractModule<MavLinkNetworkConfig> imp
     
     NetworkInterface netInterface;
     MavLinkScanner scanner;
-    JmDNS jmdns;
 
     class MavLinkScanner implements IDeviceScanner
     {
         volatile boolean scanning;
-        ServiceTypeListener sTypeListener;
-        Map<String, ServiceListener> srvListeners = new HashMap<String, ServiceListener>();        
-        
+
         @Override
         public void startScan(IDeviceScanCallback callback)
         {
             startScan(callback, null);
         }
 
+        private void registerModule() {
+
+            SensorHub hub = new SensorHub();
+            try {
+                hub.start();
+            } catch (SensorHubException e) {
+                throw new RuntimeException(e);
+            }
+
+            ModuleRegistry registry = hub.getModuleRegistry();
+
+            // Getting list of available module providers
+
+            // Creating config and loading a new module
+
+            Config config = new Config();
+            config.id = UUID.randomUUID().toString();
+            config.name = "UnmannedSystem";
+            config.autoStart = true;
+            config.moduleClass = UnmannedSystem.class.getCanonicalName();
+
+            //registry.loadModule(config);
+            //registry.initModule(config.id);
+            //registry.startModule(config.id);
+
+            ISystemDriverRegistry systemRegistry = hub.getSystemDriverRegistry();
+
+            UnmannedSystem system = new UnmannedSystem();
+            system.setConfiguration(config);
+            try {
+                system.init();
+            } catch (SensorHubException e) {
+                throw new RuntimeException(e);
+            }
+
+            systemRegistry.register(system);
+
+            // Filtering loaded modules by module type
+            //Collection<AbstractSensorModule> sensorModules = registry.getLoadedModules(AbstractSensorModule.class);
+
+            // Changing module state
+            //registry.initModule(newModule.getLocalID()); // Or async with `registry.initModuleAsync(newModule);`
+            //registry.startModule(newModule.getLocalID());
+
+//                // Destroying module
+//                registry.destroyModule(newModule.getLocalID());
+
+            // Updating a module's current config
+//                ModuleConfig config = newModule.getConfiguration();
+//                config.name = "New Name";
+//                registry.updateModuleConfigAsync(newModule, config);
+        }
+
+        private void receiveDrone( final IDeviceScanCallback callback ) {
+
+            System.out.println("Listening for drone connection...");
+
+            io.mavsdk.System drone = new io.mavsdk.System();
+            drone.getCore().getConnectionState()
+                .filter(Core.ConnectionState::getIsConnected)
+                .firstElement()
+                .subscribe(state -> {
+                    System.out.println("Drone connection detected.");
+
+                    drone.getInfo().getProduct().subscribe(
+                            info -> {
+
+                                // create device info
+                                IDeviceInfo devInfo = new IDeviceInfo() {
+
+                                    @Override
+                                    public String getName()
+                                    {
+                                        var id = info.getVendorId();
+                                        return "UAS System " + id;
+                                    }
+
+                                    @Override
+                                    public String getType()
+                                    {
+                                        return info.getProductName();
+                                    }
+
+                                    @Override
+                                    public String getAddress()
+                                    {
+                                        return "127.0.0.1";
+                                    }
+
+                                    @Override
+                                    public String getSignalLevel()
+                                    {
+                                        return null;
+                                    }
+
+                                    @Override
+                                    public ICommConfig getCommConfig()
+                                    {
+                                        final ICommConfig commConfig;
+                                        UDPConfig tcpConfig = new UDPConfig();
+                                        tcpConfig.remoteHost = "127.0.0.1";
+                                        tcpConfig.remotePort = 14550;
+                                        commConfig = tcpConfig;
+
+                                        return commConfig;
+                                    }
+                                };
+
+
+                                callback.onDeviceFound(devInfo);
+
+                                registerModule();
+                            });
+
+                });
+        }
+
         @Override
         public synchronized void startScan(final IDeviceScanCallback callback, String idRegex)
         {
             this.scanning = true;
-            
-            try
-            {
-                jmdns.addServiceTypeListener(sTypeListener = new ServiceTypeListener() {
-                    @Override
-                    public void serviceTypeAdded(ServiceEvent ev)
-                    {
-                        log.debug("Service Type Added: " + ev.getType());                
-                        ServiceListener srvListener = new ServiceListener()
-                        {
-                            @Override
-                            public void serviceAdded(ServiceEvent ev)
-                            {
-                                log.debug("Service Added: " + ev.getName() + "." + ev.getType());
-                                
-                                ServiceInfo svcInfo = jmdns.getServiceInfo(ev.getType(), ev.getName(), 1);
-                                if (svcInfo != null)
-                                    notifyServiceInfo(svcInfo, callback);
-                            }
 
-                            @Override
-                            public void serviceRemoved(ServiceEvent ev)
-                            {                                
-                            }
-
-                            @Override
-                            public void serviceResolved(final ServiceEvent ev)
-                            {
-                                log.debug("Service Resolved: " + ev.getName() +
-                                        ", Type=" + ev.getType() + 
-                                        ", Address=" + ev.getInfo().getInetAddresses()[0],
-                                        ", Port=" + ev.getInfo().getPort());
-                                
-                                notifyServiceInfo(ev.getInfo(), callback);
-                            }                            
-                        };
-                        
-                        srvListeners.put(ev.getType(), srvListener);
-                        jmdns.addServiceListener(ev.getType(), srvListener);
-                    }
-
-                    @Override
-                    public void subTypeForServiceTypeAdded(ServiceEvent event)
-                    {   
-                    }
-                });
-            }
-            catch (IOException e)
-            {
-                callback.onScanError(e);
-            }     
+            receiveDrone(callback);
         }
         
-        protected void notifyServiceInfo(final ServiceInfo svcInfo, IDeviceScanCallback callback)
-        {
-            // use IPV6 only if no IPV4 is found
-            InetAddress ipAdd = null;
-            Inet4Address[] ipv4List = svcInfo.getInet4Addresses();
-            InetAddress[] ipList = svcInfo.getInetAddresses();
-            if (ipv4List.length > 0)
-                ipAdd = ipv4List[0];
-            else if (ipList.length > 0)
-                ipAdd = ipList[0];
-            final String ip = (ipAdd != null) ? ipAdd.getHostAddress() : "NONE";
-            
-            // remove last dot from server name
-            String server = svcInfo.getServer();
-            if (server.endsWith("."))
-                server = server.substring(0, server.length()-1);
-            final String hostName = server;
-            
-            final String type = svcInfo.getType();
-            int port = svcInfo.getPort();
-            
-            // build comm config
-            final ICommConfig commConfig;
-            if (type.contains("_tcp."))
-            {
-                TCPConfig tcpConfig = new TCPConfig();
-                tcpConfig.remoteHost = ip;
-                tcpConfig.remotePort = port;
-                commConfig = tcpConfig;
-            }
-            else if (type.contains("_udp."))
-            {
-                UDPConfig tcpConfig = new UDPConfig();
-                tcpConfig.remoteHost = ip;
-                tcpConfig.remotePort = port;
-                commConfig = tcpConfig;
-            }
-            else
-                commConfig = null;
-            
-            // create device info
-            IDeviceInfo devInfo = new IDeviceInfo() {
-
-                @Override
-                public String getName()
-                {
-                    return hostName;
-                }
-
-                @Override
-                public String getType()
-                {
-                    return type;
-                }
-
-                @Override
-                public String getAddress()
-                {
-                    return ip;
-                }
-
-                @Override
-                public String getSignalLevel()
-                {
-                    return null;
-                }
-
-                @Override
-                public ICommConfig getCommConfig()
-                {
-                    return commConfig;
-                }                                    
-            };
-            
-            callback.onDeviceFound(devInfo);
-        }
 
         @Override
         public synchronized void stopScan()
         {
-            if (sTypeListener != null)
-                jmdns.removeServiceTypeListener(sTypeListener);
-            
-            for (Entry<String, ServiceListener> entry: srvListeners.entrySet())
-                jmdns.removeServiceListener(entry.getKey(), entry.getValue());
-            
             this.scanning = false;
             log.debug("Scan stopped");
         }
@@ -275,9 +259,10 @@ public class MavLinkCommNetwork extends AbstractModule<MavLinkNetworkConfig> imp
                             buf.append(String.format("%02X", b)).append(':');
                         mac = buf.substring(0, buf.length()-1);
                     }
-                    // If interface is loopback, VPN, or other non-physical interface, it won't have physical address in some operating systems
+                    // If interface is loopback, VPN, or other non-physical interface,
+                    // it won't have physical address in some operating systems
                     else
-                    mac = "NONE";
+                        mac = "NONE";
 
                     // IP address
                     Enumeration<InetAddress> ipList = netInt.getInetAddresses();
@@ -345,32 +330,12 @@ public class MavLinkCommNetwork extends AbstractModule<MavLinkNetworkConfig> imp
         {
             throw new SensorHubException("Error while looking up network interface " + config.networkInterface, e);
         }
-        
-        
-        try
-        {
-            Enumeration<InetAddress> ipList = netInterface.getInetAddresses();
-            jmdns = JmDNS.create(getDefaultInetAddress(ipList));
-        }
-        catch (IOException e)
-        {
-            throw new SensorHubException("Error while starting ZeroConf MAVLink service", e);
-        }
     }
 
 
     @Override
     protected void doStop() throws SensorHubException
     {
-        try
-        {
-            if (jmdns != null)
-                jmdns.close();
-            jmdns = null;
-        }
-        catch (IOException e)
-        {
-        }        
     }
 
 
