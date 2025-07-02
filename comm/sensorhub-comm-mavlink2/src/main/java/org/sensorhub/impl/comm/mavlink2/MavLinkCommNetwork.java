@@ -23,6 +23,7 @@ import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.sensorhub.api.ISensorHub;
 import org.sensorhub.api.comm.ICommConfig;
 import org.sensorhub.api.comm.IDeviceInfo;
 import org.sensorhub.api.comm.ICommNetwork;
@@ -30,9 +31,8 @@ import org.sensorhub.api.comm.IDeviceScanCallback;
 import org.sensorhub.api.comm.IDeviceScanner;
 import org.sensorhub.api.comm.INetworkInfo;
 import org.sensorhub.api.common.SensorHubException;
-import org.sensorhub.api.module.IModule;
-import org.sensorhub.api.module.IModuleProvider;
-import org.sensorhub.api.module.ModuleConfig;
+import org.sensorhub.api.data.IDataProducerModule;
+import org.sensorhub.api.module.*;
 import org.sensorhub.api.sensor.SensorConfig;
 import org.sensorhub.api.system.ISystemDriverRegistry;
 import org.sensorhub.impl.SensorHub;
@@ -40,6 +40,8 @@ import org.sensorhub.impl.comm.UDPConfig;
 import org.sensorhub.impl.module.AbstractModule;
 import org.sensorhub.impl.module.ModuleRegistry;
 import org.sensorhub.impl.sensor.AbstractSensorModule;
+import org.sensorhub.impl.sensor.SensorSystem;
+import org.sensorhub.impl.sensor.SensorSystemConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,14 +77,29 @@ public class MavLinkCommNetwork extends AbstractModule<MavLinkNetworkConfig> imp
             startScan(callback, null);
         }
 
+//        //Potential fix for UI bug where subsystem doesn't show up. Normally will have to
+//        //hit "Refresh" in the browser
+//        private AbstractModule<?> registerSubmodule(ModuleConfig config) throws SensorHubException {
+//            var newMember = new SensorSystemConfig.SystemMember();
+//            newMember.config = config;
+//            var newSubmodule = (AbstractModule<?>) addSubsystem(newMember);
+//
+//            // Wait for loaded module, then notify listeners of config changed. QOL for admin UI
+//            threadPool.execute(() -> {
+//                try {
+//                    newSubmodule.waitForState(ModuleEvent.ModuleState.LOADED, 10000);
+//                } catch (SensorHubException e) {
+//                    throw new RuntimeException(e);
+//                }
+//                eventHandler.publish(new ModuleEvent(this, ModuleEvent.Type.CONFIG_CHANGED));
+//            });
+//
+//            return newSubmodule;
+//        }
+
         private void registerModule() {
 
-            SensorHub hub = new SensorHub();
-            try {
-                hub.start();
-            } catch (SensorHubException e) {
-                throw new RuntimeException(e);
-            }
+            ISensorHub hub = getParentHub();
 
             ModuleRegistry registry = hub.getModuleRegistry();
 
@@ -90,42 +107,45 @@ public class MavLinkCommNetwork extends AbstractModule<MavLinkNetworkConfig> imp
 
             // Creating config and loading a new module
 
-            Config config = new Config();
-            config.id = UUID.randomUUID().toString();
-            config.name = "UnmannedSystem";
-            config.autoStart = true;
-            config.moduleClass = UnmannedSystem.class.getCanonicalName();
+            SensorSystemConfig sensorSystemConfig = new SensorSystemConfig();
+            sensorSystemConfig.id = UUID.randomUUID().toString();
+            sensorSystemConfig.name = "MAVLink Connected Systems";
+            sensorSystemConfig.autoStart = true;
+            sensorSystemConfig.moduleClass = SensorSystem.class.getCanonicalName();
+            sensorSystemConfig.uniqueID = UUID.randomUUID().toString();
 
-            //registry.loadModule(config);
-            //registry.initModule(config.id);
-            //registry.startModule(config.id);
-
-            ISystemDriverRegistry systemRegistry = hub.getSystemDriverRegistry();
-
-            UnmannedSystem system = new UnmannedSystem();
-            system.setConfiguration(config);
+            SensorSystem sensorSystem = null;
             try {
-                system.init();
+                sensorSystem = (SensorSystem) registry.loadModule(sensorSystemConfig);
             } catch (SensorHubException e) {
                 throw new RuntimeException(e);
             }
 
-            systemRegistry.register(system);
+            Config unmannedConfig = new Config();
+            unmannedConfig.id = UUID.randomUUID().toString();
+            unmannedConfig.name = "Unmanned System";
+            unmannedConfig.autoStart = true;
+            unmannedConfig.moduleClass = UnmannedSystem.class.getCanonicalName();
 
-            // Filtering loaded modules by module type
-            //Collection<AbstractSensorModule> sensorModules = registry.getLoadedModules(AbstractSensorModule.class);
+            try {
 
-            // Changing module state
-            //registry.initModule(newModule.getLocalID()); // Or async with `registry.initModuleAsync(newModule);`
-            //registry.startModule(newModule.getLocalID());
+                SensorSystemConfig.SystemMember member = new SensorSystemConfig.SystemMember();
+                member.config = unmannedConfig;
+                sensorSystem.addSubsystem(member);
+                var members = sensorSystem.getMembers();
+                for (IDataProducerModule<?> m: members.values()) {
+                    if ( !m.isInitialized() ) {
+                       m.init();
+                    }
 
-//                // Destroying module
-//                registry.destroyModule(newModule.getLocalID());
+                    if ( !m.isStarted() ) {
+                        m.start();
+                    }
+                }
 
-            // Updating a module's current config
-//                ModuleConfig config = newModule.getConfiguration();
-//                config.name = "New Name";
-//                registry.updateModuleConfigAsync(newModule, config);
+            } catch (SensorHubException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         private void receiveDrone( final IDeviceScanCallback callback ) {
