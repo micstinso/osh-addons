@@ -22,15 +22,17 @@ import org.slf4j.LoggerFactory;
  * This class is responsible for providing sensor information, managing output registration,
  * and performing initialization and shutdown for the driver and its outputs.
  */
-public class UnmannedSystem extends AbstractSensorModule<Config> {
+public class UnmannedSystem extends AbstractSensorModule<UnmannedConfig> {
     static final String UID_PREFIX = "urn:osh:template_driver:";
     static final String XML_PREFIX = "TEMPLATE_DRIVER_";
 
     private static final Logger logger = LoggerFactory.getLogger(UnmannedSystem.class);
 
-    Output output;
+    UnmannedOutput output;
     Thread processingThread;
     volatile boolean doProcessing = true;
+
+    UnmannedControl controlInterface;
 
     @Override
     public void doInit() throws SensorHubException {
@@ -41,9 +43,14 @@ public class UnmannedSystem extends AbstractSensorModule<Config> {
         generateXmlID(XML_PREFIX, config.serialNumber);
 
         // Create and initialize output
-        output = new Output(this);
+        output = new UnmannedOutput(this);
         addOutput(output, false);
         output.doInit();
+
+        // add Lat/Lon/Alt control stream
+        this.controlInterface = new UnmannedControl(this);
+        addControlInput(this.controlInterface);
+        controlInterface.init();
     }
 
     @Override

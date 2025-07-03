@@ -21,7 +21,6 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.sensorhub.api.ISensorHub;
 import org.sensorhub.api.comm.ICommConfig;
@@ -32,14 +31,9 @@ import org.sensorhub.api.comm.IDeviceScanner;
 import org.sensorhub.api.comm.INetworkInfo;
 import org.sensorhub.api.common.SensorHubException;
 import org.sensorhub.api.data.IDataProducerModule;
-import org.sensorhub.api.module.*;
-import org.sensorhub.api.sensor.SensorConfig;
-import org.sensorhub.api.system.ISystemDriverRegistry;
-import org.sensorhub.impl.SensorHub;
 import org.sensorhub.impl.comm.UDPConfig;
 import org.sensorhub.impl.module.AbstractModule;
 import org.sensorhub.impl.module.ModuleRegistry;
-import org.sensorhub.impl.sensor.AbstractSensorModule;
 import org.sensorhub.impl.sensor.SensorSystem;
 import org.sensorhub.impl.sensor.SensorSystemConfig;
 import org.slf4j.Logger;
@@ -121,7 +115,7 @@ public class MavLinkCommNetwork extends AbstractModule<MavLinkNetworkConfig> imp
                 throw new RuntimeException(e);
             }
 
-            Config unmannedConfig = new Config();
+            UnmannedConfig unmannedConfig = new UnmannedConfig();
             unmannedConfig.id = UUID.randomUUID().toString();
             unmannedConfig.name = "Unmanned System";
             unmannedConfig.autoStart = true;

@@ -20,7 +20,7 @@ import org.sensorhub.utils.OshBundleActivator;
 /*
  * Needed to expose java services as OSGi services
  */
-public class Activator extends OshBundleActivator
+public class UnmannedActivator extends OshBundleActivator
 {
 
 }

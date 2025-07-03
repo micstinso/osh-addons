@@ -27,7 +27,7 @@ import org.sensorhub.api.sensor.SensorConfig;
  * public Type configOption = "default value";
  * }</pre>
  */
-public class Config extends SensorConfig {
+public class UnmannedConfig extends SensorConfig {
     /**
      * The unique identifier for the configured sensor (or sensor platform).
      */

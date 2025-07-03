@@ -31,11 +31,11 @@ import java.util.concurrent.locks.ReentrantLock;
 import static java.lang.Math.abs;
 
 /**
- * Output specification and provider for {@link UnmannedSystem}.
+ * UnmannedOutput specification and provider for {@link UnmannedSystem}.
  */
-public class Output extends AbstractSensorOutput<UnmannedSystem> {
+public class UnmannedOutput extends AbstractSensorOutput<UnmannedSystem> {
     static final String SENSOR_OUTPUT_NAME = "SensorOutput";
-    static final String SENSOR_OUTPUT_LABEL = "UnmannedSystem Output";
+    static final String SENSOR_OUTPUT_LABEL = "UnmannedSystem UnmannedOutput";
     static final String SENSOR_OUTPUT_DESCRIPTION = "UnmannedSystem output data";
 
     private static final int MAX_NUM_TIMING_SAMPLES = 10;
@@ -67,7 +67,7 @@ public class Output extends AbstractSensorOutput<UnmannedSystem> {
      *
      * @param parentSensor UnmannedSystem driver providing this output.
      */
-    Output( UnmannedSystem parentSensor) {
+    UnmannedOutput( UnmannedSystem parentSensor) {
         super(SENSOR_OUTPUT_NAME, parentSensor);
     }
 
@@ -182,7 +182,7 @@ public class Output extends AbstractSensorOutput<UnmannedSystem> {
             // Publish the data block
             latestRecord = dataBlock;
             latestRecordTime = timestamp;
-            eventHandler.publish(new DataEvent(latestRecordTime, Output.this, dataBlock));
+            eventHandler.publish(new DataEvent(latestRecordTime, UnmannedOutput.this, dataBlock));
         }
     }
 

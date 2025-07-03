@@ -17,9 +17,9 @@ import org.sensorhub.api.module.ModuleConfig;
 import org.sensorhub.impl.module.JarModuleProvider;
 
 /**
- * Descriptor classes provide access to informative data on the OpenSensorHub driver.
+ * UnmannedDescriptor classes provide access to informative data on the OpenSensorHub driver.
  */
-public class Descriptor extends JarModuleProvider implements IModuleProvider {
+public class UnmannedDescriptor extends JarModuleProvider implements IModuleProvider {
     /**
      * Retrieves the class implementing the OpenSensorHub interface necessary to perform SOS/SPS/SOS-T operations.
      *
@@ -37,6 +37,6 @@ public class Descriptor extends JarModuleProvider implements IModuleProvider {
      */
     @Override
     public Class<? extends ModuleConfig> getModuleConfigClass() {
-        return Config.class;
+        return UnmannedConfig.class;
     }
 }
