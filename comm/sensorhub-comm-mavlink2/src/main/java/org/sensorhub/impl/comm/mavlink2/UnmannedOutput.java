@@ -62,6 +62,8 @@ public class UnmannedOutput extends AbstractSensorOutput<UnmannedSystem> {
     static Telemetry.Imu         currentImu = null;
     private final ReentrantLock lock = new ReentrantLock();
 
+    private UnmannedControlLocation unmannedControlLocation = null;
+
     /**
      * Creates a new output for the sensor driver.
      *
@@ -69,6 +71,11 @@ public class UnmannedOutput extends AbstractSensorOutput<UnmannedSystem> {
      */
     UnmannedOutput( UnmannedSystem parentSensor) {
         super(SENSOR_OUTPUT_NAME, parentSensor);
+    }
+
+    void doInit( UnmannedControlLocation control ) {
+        unmannedControlLocation = control;
+        doInit();
     }
 
     /**
@@ -255,7 +262,7 @@ public class UnmannedOutput extends AbstractSensorOutput<UnmannedSystem> {
         drone.getTelemetry().getPosition()
                 .subscribe(
                         pos -> {
-                            System.out.println("MAVSDK: Lat: " + pos.getLatitudeDeg() + ", Lon: " + pos.getLongitudeDeg());
+                            //System.out.println("MAVSDK: Lat: " + pos.getLatitudeDeg() + ", Lon: " + pos.getLongitudeDeg());
 
                             lock.lock();
                             try {
@@ -272,7 +279,7 @@ public class UnmannedOutput extends AbstractSensorOutput<UnmannedSystem> {
         drone.getTelemetry().getVelocityNed()
                 .subscribe(
                         vel -> {
-                            System.out.println("MAVSDK: Velocity E:" + vel.getEastMS() + " M/S, N:" + vel.getNorthMS() + " M/S");
+                            //System.out.println("MAVSDK: Velocity E:" + vel.getEastMS() + " M/S, N:" + vel.getNorthMS() + " M/S");
 
                             lock.lock();
                             try {
@@ -303,19 +310,19 @@ public class UnmannedOutput extends AbstractSensorOutput<UnmannedSystem> {
 
                     setData(System.currentTimeMillis());
 
-                    System.out.println("Accel Forward: " + imu.getAccelerationFrd().getForwardMS2() + " m/s^2");
-                    System.out.println("Accel Right: " + imu.getAccelerationFrd().getRightMS2() + " m/s^2");
-                    System.out.println("Accel Down: " + imu.getAccelerationFrd().getDownMS2() + " m/s^2");
+                    //System.out.println("Accel Forward: " + imu.getAccelerationFrd().getForwardMS2() + " m/s^2");
+                    //System.out.println("Accel Right: " + imu.getAccelerationFrd().getRightMS2() + " m/s^2");
+                    //System.out.println("Accel Down: " + imu.getAccelerationFrd().getDownMS2() + " m/s^2");
 
-                    System.out.println("Gyro Forward: " + imu.getAngularVelocityFrd().getForwardRadS() + " rad");
-                    System.out.println("Gyro Right: " + imu.getAngularVelocityFrd().getRightRadS() + " rad");
-                    System.out.println("Gyro Down: " + imu.getAngularVelocityFrd().getDownRadS() + " rad");
+                    //System.out.println("Gyro Forward: " + imu.getAngularVelocityFrd().getForwardRadS() + " rad");
+                    //System.out.println("Gyro Right: " + imu.getAngularVelocityFrd().getRightRadS() + " rad");
+                    //System.out.println("Gyro Down: " + imu.getAngularVelocityFrd().getDownRadS() + " rad");
 
-                    System.out.println("Temperature: " + imu.getTemperatureDegc() + " degC");
+                    //System.out.println("Temperature: " + imu.getTemperatureDegc() + " degC");
 
-                    System.out.println("Magnetic Field Forward: " + imu.getMagneticFieldFrd().getForwardGauss() + " Gauss");
-                    System.out.println("Magnetic Field Right: " + imu.getMagneticFieldFrd().getRightGauss() + " Gauss");
-                    System.out.println("Magnetic Field Down: " + imu.getMagneticFieldFrd().getDownGauss() + " Gauss");
+                    //System.out.println("Magnetic Field Forward: " + imu.getMagneticFieldFrd().getForwardGauss() + " Gauss");
+                    //System.out.println("Magnetic Field Right: " + imu.getMagneticFieldFrd().getRightGauss() + " Gauss");
+                    //System.out.println("Magnetic Field Down: " + imu.getMagneticFieldFrd().getDownGauss() + " Gauss");
                 });
 
     }
@@ -422,8 +429,9 @@ public class UnmannedOutput extends AbstractSensorOutput<UnmannedSystem> {
                 .subscribe(state -> {
                     System.out.println("Drone connection detected.");
 
+                    unmannedControlLocation.setSystem(drone);
                     subscribeTelemetry(drone);
-                    setUpScenario(drone);
+                    //setUpScenario(drone);
                     //sendMission(drone);
 
                 });
