@@ -32,8 +32,9 @@ public class UnmannedSystem extends AbstractSensorModule<UnmannedConfig> {
     Thread processingThread;
     volatile boolean doProcessing = true;
 
-    UnmannedControlLocation unmannedControlLocation;
     UnmannedControlTakeoff unmannedControlTakeoff;
+    UnmannedControlLocation unmannedControlLocation;
+    UnmannedControlLanding unmannedControlLanding;
 
     @Override
     public void doInit() throws SensorHubException {
@@ -48,15 +49,19 @@ public class UnmannedSystem extends AbstractSensorModule<UnmannedConfig> {
         addOutput(output, false);
 
         // add Lat/Lon/Alt control stream
-        this.unmannedControlLocation = new UnmannedControlLocation(this);
-        addControlInput(this.unmannedControlLocation);
-        unmannedControlLocation.init();
-
         this.unmannedControlTakeoff = new UnmannedControlTakeoff(this);
         addControlInput(this.unmannedControlTakeoff);
         unmannedControlTakeoff.init();
 
-        output.doInit(unmannedControlLocation);
+        this.unmannedControlLocation = new UnmannedControlLocation(this);
+        addControlInput(this.unmannedControlLocation);
+        unmannedControlLocation.init();
+
+        this.unmannedControlLanding = new UnmannedControlLanding(this);
+        addControlInput(this.unmannedControlLanding);
+        unmannedControlLanding.init();
+
+        output.doInit(unmannedControlLocation,unmannedControlLanding, unmannedControlTakeoff);
     }
 
     @Override

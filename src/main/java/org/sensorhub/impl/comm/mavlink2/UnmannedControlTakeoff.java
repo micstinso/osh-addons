@@ -62,7 +62,7 @@ public class UnmannedControlTakeoff extends AbstractSensorControl<UnmannedSystem
      */
     private static final String NODE_NAME_STR = "/SensorHub/spot/takeoff_control";
 
-    private io.mavsdk.System system = new io.mavsdk.System();
+    private io.mavsdk.System system = null;
 
     static double deltaSuccess =   0.000003; //distance from lat/lon to determine success
 
@@ -102,6 +102,8 @@ public class UnmannedControlTakeoff extends AbstractSensorControl<UnmannedSystem
 
         if ( system != null ) {
             takeOff( altitude );
+        } else {
+            throw new CommandException("Unmanned System not initialized");
         }
 
         return true;
@@ -112,7 +114,7 @@ public class UnmannedControlTakeoff extends AbstractSensorControl<UnmannedSystem
 
         System.out.println("Setting up scenario...");
 
-        CountDownLatch latch = new CountDownLatch(1);
+        System.out.println("Setting takeoff altitude AGL: " + altAglParam);
 
         system.getAction().arm()
                 .doOnComplete(() -> {
@@ -122,7 +124,7 @@ public class UnmannedControlTakeoff extends AbstractSensorControl<UnmannedSystem
                 })
                 .doOnError(throwable -> {
 
-                    System.out.println("Failed to arm");
+                    System.out.println("Failed to arm: " + throwable.getMessage());
 
                 })
                 .andThen(system.getAction().setTakeoffAltitude((float)altAglParam))
@@ -142,17 +144,12 @@ public class UnmannedControlTakeoff extends AbstractSensorControl<UnmannedSystem
                         .firstElement()
                         .ignoreElement()
                 )
-                .subscribe(latch::countDown, throwable -> {
+                .subscribe(() -> {
+                    System.out.println("Reached takeoff altitude");
+                    },
+                        throwable -> System.out.println("Failed")
+                );
 
-                    latch.countDown();
-
-                });
-
-        try {
-            latch.await();
-        } catch (InterruptedException ignored) {
-            // This is expected
-        }
     }
 
 

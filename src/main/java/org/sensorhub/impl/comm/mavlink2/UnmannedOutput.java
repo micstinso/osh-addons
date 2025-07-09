@@ -63,6 +63,8 @@ public class UnmannedOutput extends AbstractSensorOutput<UnmannedSystem> {
     private final ReentrantLock lock = new ReentrantLock();
 
     private UnmannedControlLocation unmannedControlLocation = null;
+    private UnmannedControlTakeoff unmannedControlTakeoff = null;
+    private UnmannedControlLanding unmannedControlLanding = null;
 
     /**
      * Creates a new output for the sensor driver.
@@ -73,8 +75,13 @@ public class UnmannedOutput extends AbstractSensorOutput<UnmannedSystem> {
         super(SENSOR_OUTPUT_NAME, parentSensor);
     }
 
-    void doInit( UnmannedControlLocation control ) {
-        unmannedControlLocation = control;
+    void doInit( UnmannedControlLocation location,
+                 UnmannedControlLanding landing,
+                 UnmannedControlTakeoff takeoff ) {
+
+        unmannedControlLocation = location;
+        unmannedControlLanding = landing;
+        unmannedControlTakeoff = takeoff;
         doInit();
     }
 
@@ -430,6 +437,8 @@ public class UnmannedOutput extends AbstractSensorOutput<UnmannedSystem> {
                     System.out.println("Drone connection detected.");
 
                     unmannedControlLocation.setSystem(drone);
+                    unmannedControlTakeoff.setSystem(drone);
+                    unmannedControlLanding.setSystem(drone);
                     subscribeTelemetry(drone);
                     //setUpScenario(drone);
                     //sendMission(drone);
