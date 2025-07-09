@@ -20,6 +20,7 @@ import io.mavsdk.action.Action;
 import net.opengis.swe.v20.*;
 import org.sensorhub.api.command.CommandException;
 import org.sensorhub.impl.sensor.AbstractSensorControl;
+import org.vast.swe.SWEHelper;
 import org.vast.swe.helper.GeoPosHelper;
 
 import java.util.concurrent.CountDownLatch;
@@ -60,7 +61,7 @@ public class UnmannedControlLocation extends AbstractSensorControl<UnmannedSyste
      */
     private static final String NODE_NAME_STR = "/SensorHub/spot/location_control";
 
-    private io.mavsdk.System system = new io.mavsdk.System();
+    private io.mavsdk.System system = null;
 
     static double deltaSuccess =   0.000003; //distance from lat/lon to determine success
 
@@ -82,14 +83,28 @@ public class UnmannedControlLocation extends AbstractSensorControl<UnmannedSyste
 
         GeoPosHelper factory = new GeoPosHelper();
 
+        /*
+                .addField("freq", sml.createQuantity()
+                    .definition(SWEHelper.getQudtUri("Frequency"))
+                    .label("Frequency")
+                    .uomCode(freqUnit)
+                    .build())
+         */
+
         commandDataStruct = factory.createRecord()
                 .name(SENSOR_CONTROL_NAME)
                 .label(SENSOR_CONTROL_LABEL)
                 .description(SENSOR_CONTROL_DESCRIPTION)
                 .addField( "locationVectorLLA", factory.createVector()
-                        .addCoordinate("Latitude", factory.createQuantity())
-                        .addCoordinate("Longitude", factory.createQuantity())
-                        .addCoordinate("AltitudeAGL", factory.createQuantity()))
+                        .addCoordinate("Latitude", factory.createQuantity()
+                                .uom("deg"))
+                        .addCoordinate("Longitude", factory.createQuantity()
+                                .uom("deg"))
+                        .addCoordinate("AltitudeAGL", factory.createQuantity()
+                                .uom("m")
+                                .value(30)))
+                .addField( "returnToStart", factory.createBoolean().value(false))
+                .addField( "hoverSeconds", factory.createCount().value(0))
                 .build();
     }
 
@@ -100,11 +115,15 @@ public class UnmannedControlLocation extends AbstractSensorControl<UnmannedSyste
         double latitude = command.getDoubleValue(0);
         double longitude = command.getDoubleValue(1);
         double altitude = command.getDoubleValue(2);
+        boolean returnToStart = command.getBooleanValue(3);
+        long hoverSeconds = command.getLongValue(4);
 
         System.out.println("Command received - Lat: " + latitude + " Lon: " + longitude + " Alt: " + altitude );
 
         if ( system != null ) {
-            sendToLocation( latitude, longitude, altitude );
+            sendToLocation( latitude, longitude, altitude, returnToStart, hoverSeconds );
+        } else {
+            throw new CommandException("Unmanned System not initialized");
         }
 
         return true;
@@ -113,27 +132,29 @@ public class UnmannedControlLocation extends AbstractSensorControl<UnmannedSyste
 
     private void sendToLocation( double latitudeParam,
                                  double longitudeParam,
-                                 double altAglParam ) {
+                                 double altAglParam,
+                                 boolean returnHomeParam,
+                                 long hoverSecondsParam ) {
 
-        System.out.println("Setting up scenario...");
+        System.out.println("Preparing to send to location...");
 
-        CountDownLatch latch = new CountDownLatch(1);
+        float absoluteMsl = system.getTelemetry().getPosition().blockingFirst().getAbsoluteAltitudeM();
+        System.out.println("absolute MSL (m): " + absoluteMsl);
 
-        //Ensure drone is armed first and at takeoff altitude then move to location
-/*        system.getTelemetry().getArmed()
-                .filter(armed -> armed)
-                .firstElement()
-                .ignoreElement()
-                .andThen(system.getTelemetry().getPosition()
-                        .filter(pos -> pos.getRelativeAltitudeM() >= altAglParam )
-                        .firstElement()
-                        .ignoreElement()
-                )
-                .delay(1, TimeUnit.SECONDS)
-                .andThen(*/
-        system.getAction().gotoLocation(latitudeParam, longitudeParam,
-                                (float)altAglParam + system.getTelemetry().getPosition().blockingFirst().getAbsoluteAltitudeM(),
-                                45.0F)
+        float relativeAltitude = system.getTelemetry().getPosition().blockingFirst().getRelativeAltitudeM();
+        System.out.println("current Relative MSL (m): " + relativeAltitude);
+
+        float terrainOffset = absoluteMsl - relativeAltitude;
+        System.out.println("terrain offset: " + terrainOffset);
+
+        // We can use the last
+        // known relative altitude to set an approximate MSL. This will sometimes not be adequate as the
+        // terrain will change. For now it's good for a quick demo, but we'll want to eventually
+        // constantly adjust based on terrain altitude.
+        float altMsl = (float)altAglParam + terrainOffset;
+        System.out.println("setting altitude MSL to: " + altMsl);
+
+        system.getAction().gotoLocation(latitudeParam, longitudeParam, altMsl, 45.0F)
                 .doOnComplete( () -> {
 
                     System.out.println("Moving to target location");
@@ -149,9 +170,8 @@ public class UnmannedControlLocation extends AbstractSensorControl<UnmannedSyste
                         .firstElement()
                         .ignoreElement()
                 )
-                .subscribe(latch::countDown, throwable -> {
-                    System.out.println("Reached target location");
-                    latch.countDown();
+                .subscribe(() -> {
+
                 });
 
     }

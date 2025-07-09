@@ -17,17 +17,13 @@
 package org.sensorhub.impl.comm.mavlink2;
 
 import io.mavsdk.action.Action;
+import io.mavsdk.telemetry.Telemetry;
 import net.opengis.swe.v20.DataBlock;
 import net.opengis.swe.v20.DataComponent;
 import net.opengis.swe.v20.DataRecord;
 import org.sensorhub.api.command.CommandException;
 import org.sensorhub.impl.sensor.AbstractSensorControl;
 import org.vast.swe.helper.GeoPosHelper;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import static java.lang.Math.abs;
 
 /**
  * <p>
@@ -37,37 +33,37 @@ import static java.lang.Math.abs;
  * @author Michael Stinson
  * @since Jul 2025
  */
-public class UnmannedControlTakeoff extends AbstractSensorControl<UnmannedSystem>
+public class UnmannedControlLanding extends AbstractSensorControl<UnmannedSystem>
 {
     private DataRecord commandDataStruct;
 
     /**
      * Name of the control
      */
-    private static final String SENSOR_CONTROL_NAME = "UnmannedControlTakeoff";
+    private static final String SENSOR_CONTROL_NAME = "UnmannedControlLanding";
 
     /**
      * Label for the control
      */
-    private static final String SENSOR_CONTROL_LABEL = "Takeoff Control";
+    private static final String SENSOR_CONTROL_LABEL = "Landing Control";
 
     /**
      * Control description
      */
     private static final String SENSOR_CONTROL_DESCRIPTION =
-            "Interfaces with MAVLINK and OSH to effectuate takeoff control over the platform";
+            "Interfaces with MAVLINK and OSH to effectuate landing control over the platform";
 
     /**
      * ROS Node name assigned at creation
      */
-    private static final String NODE_NAME_STR = "/SensorHub/spot/takeoff_control";
+    private static final String NODE_NAME_STR = "/SensorHub/spot/landing_control";
 
     private io.mavsdk.System system = null;
 
     static double deltaSuccess =   0.000003; //distance from lat/lon to determine success
 
-    public UnmannedControlTakeoff( UnmannedSystem parentSensor) {
-        super("mavTakeoffControl", parentSensor);
+    public UnmannedControlLanding( UnmannedSystem parentSensor) {
+        super("mavLandingControl", parentSensor);
     }
 
 
@@ -88,7 +84,7 @@ public class UnmannedControlTakeoff extends AbstractSensorControl<UnmannedSystem
                 .name(SENSOR_CONTROL_NAME)
                 .label(SENSOR_CONTROL_LABEL)
                 .description(SENSOR_CONTROL_DESCRIPTION)
-                .addField("TakeoffAltitudeAGL", factory.createQuantity())
+                .addField("disarm", factory.createBoolean().value(true))
                 .build();
     }
 
@@ -96,12 +92,12 @@ public class UnmannedControlTakeoff extends AbstractSensorControl<UnmannedSystem
     @Override
     protected boolean execCommand(DataBlock command) throws CommandException {
 
-        double altitude = command.getDoubleValue(0);
+        boolean disarm = command.getBooleanValue(0);
 
-        System.out.println("Command received - Alt: " + altitude );
+        System.out.println("Command received - Land - Disarm: " + disarm );
 
         if ( system != null ) {
-            takeOff( altitude );
+            land( disarm );
         } else {
             throw new CommandException("Unmanned System not initialized");
         }
@@ -110,46 +106,62 @@ public class UnmannedControlTakeoff extends AbstractSensorControl<UnmannedSystem
     }
 
 
-    private void takeOff( double altAglParam ) {
+    private void land( boolean disarmParam ) {
 
         System.out.println("Setting up scenario...");
 
-        System.out.println("Setting takeoff altitude AGL: " + altAglParam);
+        system.getAction().land()
+                .doOnComplete( () -> {
 
-        system.getAction().arm()
-                .doOnComplete(() -> {
-
-                    System.out.println("Arming...");
+                    System.out.println("Landing...");
 
                 })
-                .doOnError(throwable -> {
+                .doOnError( throwable -> {
 
-                    System.out.println("Failed to arm: " + throwable.getMessage());
+                    System.out.println("Failed to land: " + ((Action.ActionException) throwable).getCode());
 
                 })
-                .andThen(system.getAction().setTakeoffAltitude((float)altAglParam))
-                .andThen(system.getAction().takeoff()
-                        .doOnComplete(() -> {
-
-                            System.out.println("Taking off...");
-
-                        })
-                        .doOnError(throwable -> {
-
-                            System.out.println("Failed to take off");
-
-                        }))
-                .andThen(system.getTelemetry().getPosition()
-                        .filter(pos -> pos.getRelativeAltitudeM() >= altAglParam)
+                .andThen(system.getTelemetry().getLandedState()
+                        .filter( landed -> landed == Telemetry.LandedState.ON_GROUND )
                         .firstElement()
                         .ignoreElement()
                 )
                 .subscribe(() -> {
-                    System.out.println("Reached takeoff altitude");
-                    },
-                        throwable -> System.out.println("Failed")
-                );
 
+                    System.out.println("Landed");
+
+                    if ( disarmParam ) {
+
+                        System.out.println("Checking to see if disarm necessary..." );
+
+                        system.getTelemetry().getArmed()
+                            .firstElement()
+                            .subscribe( armed -> {
+                               if ( armed ) {
+
+                                   System.out.println("System already disarmed.");
+                               } else {
+
+                                   system.getAction().disarm()
+                                           .doOnComplete( () -> {
+
+                                               System.out.println("Disarming...");
+
+                                           })
+                                           .doOnError( throwable -> {
+
+                                               System.out.println("Failed to disarm: " + ((Action.ActionException) throwable).getCode());
+
+                                           });
+                               }
+
+                            });
+
+
+                    }
+
+                })
+        ;
     }
 
 
