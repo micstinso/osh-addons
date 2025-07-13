@@ -58,6 +58,7 @@ public class UnmannedOutput extends AbstractSensorOutput<UnmannedSystem> {
     static double deltaSuccess =   0.000003;
 
     static Telemetry.Position    currentPosition = null;
+    static Telemetry.EulerAngle  currentAttitude = null;
     static Telemetry.VelocityNed currentVelocity = null;
     static Telemetry.Imu         currentImu = null;
     private final ReentrantLock lock = new ReentrantLock();
@@ -104,6 +105,7 @@ public class UnmannedOutput extends AbstractSensorOutput<UnmannedSystem> {
                 .addField("Location", sweFactory.createLocationVectorLLA()
                    .label("Location")
                    .description("Location Latitude Longitude Altitude"))
+                .addField("Orientation", sweFactory.createEulerOrientationYPR("deg"))
                 .addField( "Velocity", sweFactory.createVelocityVectorNED("m/s")
                     .label("Velocity")
                     .description("Velocity"))
@@ -167,6 +169,11 @@ public class UnmannedOutput extends AbstractSensorOutput<UnmannedSystem> {
                     dataBlock.setDoubleValue(index++, currentPosition.getLatitudeDeg());
                     dataBlock.setDoubleValue(index++, currentPosition.getLongitudeDeg());
                     dataBlock.setDoubleValue(index++, currentPosition.getAbsoluteAltitudeM());
+
+                    // Orientation
+                    dataBlock.setDoubleValue(index++, currentAttitude.getYawDeg());
+                    dataBlock.setDoubleValue(index++, currentAttitude.getPitchDeg());
+                    dataBlock.setDoubleValue(index++, currentAttitude.getRollDeg());
 
                     //Velocity
                     dataBlock.setDoubleValue(index++, currentVelocity.getNorthMS());
@@ -332,6 +339,18 @@ public class UnmannedOutput extends AbstractSensorOutput<UnmannedSystem> {
                     //System.out.println("Magnetic Field Down: " + imu.getMagneticFieldFrd().getDownGauss() + " Gauss");
                 });
 
+        drone.getTelemetry().getAttitudeEuler()
+                .subscribe(attitude -> {
+                    lock.lock();
+                    try {
+                        currentAttitude = attitude;
+                    } finally {
+                        lock.unlock();
+                    }
+
+                    setData(System.currentTimeMillis());
+                });
+
     }
 
     public static void downloadLog( io.mavsdk.System drone ) {
@@ -439,6 +458,7 @@ public class UnmannedOutput extends AbstractSensorOutput<UnmannedSystem> {
                     unmannedControlLocation.setSystem(drone);
                     unmannedControlTakeoff.setSystem(drone);
                     unmannedControlLanding.setSystem(drone);
+                    parentSensor.unmannedControlOffboard.setSystem(drone);
                     subscribeTelemetry(drone);
                     //setUpScenario(drone);
                     //sendMission(drone);

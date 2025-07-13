@@ -35,6 +35,7 @@ public class UnmannedSystem extends AbstractSensorModule<UnmannedConfig> {
     UnmannedControlTakeoff unmannedControlTakeoff;
     UnmannedControlLocation unmannedControlLocation;
     UnmannedControlLanding unmannedControlLanding;
+    UnmannedControlOffboard unmannedControlOffboard;
 
     @Override
     public void doInit() throws SensorHubException {
@@ -60,6 +61,10 @@ public class UnmannedSystem extends AbstractSensorModule<UnmannedConfig> {
         this.unmannedControlLanding = new UnmannedControlLanding(this);
         addControlInput(this.unmannedControlLanding);
         unmannedControlLanding.init();
+
+        this.unmannedControlOffboard = new UnmannedControlOffboard(this);
+        addControlInput(this.unmannedControlOffboard);
+        unmannedControlOffboard.init();
 
         output.doInit(unmannedControlLocation,unmannedControlLanding, unmannedControlTakeoff);
     }
