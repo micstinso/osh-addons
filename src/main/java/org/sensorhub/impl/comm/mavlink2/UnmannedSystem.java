@@ -133,7 +133,7 @@ public class UnmannedSystem extends AbstractSensorModule<UnmannedConfig> {
 
         System.out.println("Listening for drone connection...");
 
-        io.mavsdk.System drone = new io.mavsdk.System();
+        io.mavsdk.System drone = new io.mavsdk.System(config.SDKAddress, config.SDKPort);
         drone.getCore().getConnectionState()
                 .filter(Core.ConnectionState::getIsConnected)
                 .firstElement()

@@ -41,7 +41,7 @@ public class UnmannedConfig extends SensorConfig {
 
     public List<MissionConfig> stuff;
 
-    public String address;
-    public int port;
-    public int systemID;
+    public String SDKAddress = "127.0.0.1";
+    public int SDKPort = 50051;
+    public String systemId;
 }
