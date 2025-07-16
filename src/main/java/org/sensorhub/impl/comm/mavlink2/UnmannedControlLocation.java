@@ -17,6 +17,7 @@
 package org.sensorhub.impl.comm.mavlink2;
 
 import io.mavsdk.action.Action;
+import io.reactivex.Completable;
 import net.opengis.swe.v20.*;
 import org.sensorhub.api.command.CommandException;
 import org.sensorhub.impl.sensor.AbstractSensorControl;
@@ -154,6 +155,9 @@ public class UnmannedControlLocation extends AbstractSensorControl<UnmannedSyste
         float altMsl = (float)altAglParam + terrainOffset;
         System.out.println("setting altitude MSL to: " + altMsl);
 
+        double homeLat = system.getTelemetry().getPosition().blockingFirst().getLatitudeDeg();
+        double homeLon = system.getTelemetry().getPosition().blockingFirst().getLongitudeDeg();
+
         system.getAction().gotoLocation(latitudeParam, longitudeParam, altMsl, 45.0F)
                 .doOnComplete( () -> {
 
@@ -169,10 +173,23 @@ public class UnmannedControlLocation extends AbstractSensorControl<UnmannedSyste
                         .filter(pos -> (abs(pos.getLatitudeDeg() - latitudeParam) <= deltaSuccess && abs(pos.getLongitudeDeg() - longitudeParam) <= deltaSuccess))
                         .firstElement()
                         .ignoreElement()
-                )
-                .subscribe(() -> {
+                        .delay(hoverSecondsParam, TimeUnit.SECONDS) //hover if the value is marked
+                        .andThen( Completable.fromAction(() -> {
 
-                });
+                            //return home if the value is checked
+                            if ( returnHomeParam ) {
+                                system.getAction().gotoLocation(homeLat, homeLon, altMsl, 45.0F)
+                                        .doOnComplete(() -> {
+                                            System.out.println("Moving back to home");
+                                        })
+                                        .doOnError(throwable -> {
+                                            System.out.println("Failed to go home: " + ((Action.ActionException) throwable).getCode());
+                                        })
+                                        .subscribe();
+                            }
+                        }))
+                )
+                .subscribe();
 
     }
 
