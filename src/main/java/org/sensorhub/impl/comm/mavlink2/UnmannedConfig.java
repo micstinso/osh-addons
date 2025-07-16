@@ -39,7 +39,7 @@ public class UnmannedConfig extends SensorConfig {
     @DisplayInfo(desc = "Serial number or unique identifier")
     public String serialNumber = "sensor001";
 
-    public List<MissionConfig> stuff;
+    public List<MissionConfig> missions;
 
     public String SDKAddress = "127.0.0.1";
     public int SDKPort = 50051;

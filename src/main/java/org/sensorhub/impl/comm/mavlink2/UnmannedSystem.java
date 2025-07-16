@@ -43,6 +43,7 @@ public class UnmannedSystem extends AbstractSensorModule<UnmannedConfig> {
     UnmannedControlTakeoff unmannedControlTakeoff;
     UnmannedControlLocation unmannedControlLocation;
     UnmannedControlLanding unmannedControlLanding;
+    UnmannedControlMission unmannedControlMission;
     UnmannedControlOffboard unmannedControlOffboard;
     UnmannedControlShell unmannedControlShell;
 
@@ -70,6 +71,11 @@ public class UnmannedSystem extends AbstractSensorModule<UnmannedConfig> {
         this.unmannedControlLanding = new UnmannedControlLanding(this);
         addControlInput(this.unmannedControlLanding);
         unmannedControlLanding.init();
+
+        this.unmannedControlMission = new UnmannedControlMission(this);
+        addControlInput(this.unmannedControlMission);
+        unmannedControlMission.setLocationControl(unmannedControlLocation);
+        unmannedControlMission.init();
 
         this.unmannedControlOffboard = new UnmannedControlOffboard(this);
         addControlInput(this.unmannedControlOffboard);
@@ -148,6 +154,7 @@ public class UnmannedSystem extends AbstractSensorModule<UnmannedConfig> {
                     unmannedControlLocation.setSystem(drone);
                     unmannedControlTakeoff.setSystem(drone);
                     unmannedControlLanding.setSystem(drone);
+                    unmannedControlMission.setSystem(drone);
                     unmannedControlShell.setSystem(drone);
                     output.subscribeTelemetry(drone);
                     //setUpScenario(drone);

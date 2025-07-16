@@ -64,7 +64,7 @@ public class UnmannedControlLocation extends AbstractSensorControl<UnmannedSyste
 
     private io.mavsdk.System system = null;
 
-    static double deltaSuccess =   0.000003; //distance from lat/lon to determine success
+    static double deltaSuccess =   0.000005; //distance from lat/lon to determine success
 
     public UnmannedControlLocation( UnmannedSystem parentSensor) {
         super("mavControl", parentSensor);
@@ -122,7 +122,8 @@ public class UnmannedControlLocation extends AbstractSensorControl<UnmannedSyste
         System.out.println("Command received - Lat: " + latitude + " Lon: " + longitude + " Alt: " + altitude );
 
         if ( system != null ) {
-            sendToLocation( latitude, longitude, altitude, returnToStart, hoverSeconds );
+            sendToLocation( latitude, longitude, altitude, returnToStart, hoverSeconds )
+                    .subscribe();
         } else {
             throw new CommandException("Unmanned System not initialized");
         }
@@ -131,7 +132,7 @@ public class UnmannedControlLocation extends AbstractSensorControl<UnmannedSyste
     }
 
 
-    private void sendToLocation( double latitudeParam,
+    public Completable sendToLocation( double latitudeParam,
                                  double longitudeParam,
                                  double altAglParam,
                                  boolean returnHomeParam,
@@ -139,6 +140,52 @@ public class UnmannedControlLocation extends AbstractSensorControl<UnmannedSyste
 
         System.out.println("Preparing to send to location...");
 
+        float altMsl = getAltMsl((float) altAglParam);
+        System.out.println("setting altitude MSL to: " + altMsl);
+
+        double homeLat = system.getTelemetry().getPosition().blockingFirst().getLatitudeDeg();
+        double homeLon = system.getTelemetry().getPosition().blockingFirst().getLongitudeDeg();
+
+        return goLocation(latitudeParam, longitudeParam, returnHomeParam, hoverSecondsParam, altMsl, homeLat, homeLon);
+    }
+
+
+    public Completable goLocation( double latitudeParam, double longitudeParam, boolean returnHomeParam, long hoverSecondsParam, float altMsl, double homeLat, double homeLon ) {
+        return system.getAction().gotoLocation(latitudeParam, longitudeParam, altMsl, 45.0F)
+                .doOnComplete(() -> {
+
+                    System.out.println("Moving to target location");
+
+                })
+                .doOnError(throwable -> {
+
+                    System.out.println("Failed to go to target: " + ((Action.ActionException) throwable).getCode());
+
+                })
+                .andThen(system.getTelemetry().getPosition()
+                        .filter(pos -> (abs(pos.getLatitudeDeg() - latitudeParam) <= deltaSuccess && abs(pos.getLongitudeDeg() - longitudeParam) <= deltaSuccess))
+                        .firstElement()
+                        .ignoreElement()
+                        .delay(hoverSecondsParam, TimeUnit.SECONDS) //hover if the value is marked
+                        .andThen(Completable.fromAction(() -> {
+
+                            //return home if the value is checked
+                            if (returnHomeParam) {
+                                system.getAction().gotoLocation(homeLat, homeLon, altMsl, 45.0F)
+                                        .doOnComplete(() -> {
+                                            System.out.println("Moving back to home");
+                                        })
+                                        .doOnError(throwable -> {
+                                            System.out.println("Failed to go home: " + ((Action.ActionException) throwable).getCode());
+                                        })
+                                        .subscribe();
+                            }
+                        }))
+                );
+    }
+
+
+    public float getAltMsl( float altAglParam ) {
         float absoluteMsl = system.getTelemetry().getPosition().blockingFirst().getAbsoluteAltitudeM();
         System.out.println("absolute MSL (m): " + absoluteMsl);
 
@@ -152,45 +199,8 @@ public class UnmannedControlLocation extends AbstractSensorControl<UnmannedSyste
         // known relative altitude to set an approximate MSL. This will sometimes not be adequate as the
         // terrain will change. For now it's good for a quick demo, but we'll want to eventually
         // constantly adjust based on terrain altitude.
-        float altMsl = (float)altAglParam + terrainOffset;
-        System.out.println("setting altitude MSL to: " + altMsl);
-
-        double homeLat = system.getTelemetry().getPosition().blockingFirst().getLatitudeDeg();
-        double homeLon = system.getTelemetry().getPosition().blockingFirst().getLongitudeDeg();
-
-        system.getAction().gotoLocation(latitudeParam, longitudeParam, altMsl, 45.0F)
-                .doOnComplete( () -> {
-
-                    System.out.println("Moving to target location");
-
-                })
-                .doOnError( throwable -> {
-
-                    System.out.println("Failed to go to target: " + ((Action.ActionException) throwable).getCode());
-
-                })
-                .andThen(system.getTelemetry().getPosition()
-                        .filter(pos -> (abs(pos.getLatitudeDeg() - latitudeParam) <= deltaSuccess && abs(pos.getLongitudeDeg() - longitudeParam) <= deltaSuccess))
-                        .firstElement()
-                        .ignoreElement()
-                        .delay(hoverSecondsParam, TimeUnit.SECONDS) //hover if the value is marked
-                        .andThen( Completable.fromAction(() -> {
-
-                            //return home if the value is checked
-                            if ( returnHomeParam ) {
-                                system.getAction().gotoLocation(homeLat, homeLon, altMsl, 45.0F)
-                                        .doOnComplete(() -> {
-                                            System.out.println("Moving back to home");
-                                        })
-                                        .doOnError(throwable -> {
-                                            System.out.println("Failed to go home: " + ((Action.ActionException) throwable).getCode());
-                                        })
-                                        .subscribe();
-                            }
-                        }))
-                )
-                .subscribe();
-
+        float altMsl = altAglParam + terrainOffset;
+        return altMsl;
     }
 
 
