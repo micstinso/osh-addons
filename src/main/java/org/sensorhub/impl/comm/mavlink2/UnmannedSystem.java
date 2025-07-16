@@ -23,8 +23,8 @@ import org.slf4j.LoggerFactory;
  * and performing initialization and shutdown for the driver and its outputs.
  */
 public class UnmannedSystem extends AbstractSensorModule<UnmannedConfig> {
-    static final String UID_PREFIX = "urn:osh:template_driver:";
-    static final String XML_PREFIX = "TEMPLATE_DRIVER_";
+    static final String UID_PREFIX = "urn:osh:driver:mavlink2:";
+    static final String XML_PREFIX = "MAVLINK2_DRIVER_";
 
     private static final Logger logger = LoggerFactory.getLogger(UnmannedSystem.class);
 
