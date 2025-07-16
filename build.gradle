@@ -1,4 +1,4 @@
-description = 'MAVLink Connection'
+description = 'Unmanned System'
 ext.details = 'MAVLink adapter'
 
 dependencies{

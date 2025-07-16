@@ -10,7 +10,7 @@ public class UnmannedSwarm extends SensorSystem {
         getMembers();
 
         // Add control input that distributes LLA command among members
-        addControlInput();
+        //addControlInput();
     }
 
 }
