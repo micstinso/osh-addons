@@ -13,6 +13,10 @@ package org.sensorhub.impl.comm.mavlink2;
 
 import org.sensorhub.api.config.DisplayInfo;
 import org.sensorhub.api.sensor.SensorConfig;
+import org.sensorhub.impl.comm.mavlink2.config.MissionConfig;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Configuration settings for the {@link UnmannedSystem} driver exposed via the OpenSensorHub Admin panel.
@@ -34,4 +38,10 @@ public class UnmannedConfig extends SensorConfig {
     @DisplayInfo.Required
     @DisplayInfo(desc = "Serial number or unique identifier")
     public String serialNumber = "sensor001";
+
+    public List<MissionConfig> stuff;
+
+    public String address;
+    public int port;
+    public int systemID;
 }
