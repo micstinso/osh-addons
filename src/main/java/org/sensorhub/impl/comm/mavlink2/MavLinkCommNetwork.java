@@ -120,6 +120,7 @@ public class MavLinkCommNetwork extends AbstractModule<MavLinkNetworkConfig> imp
             unmannedConfig.name = "Unmanned System";
             unmannedConfig.autoStart = true;
             unmannedConfig.moduleClass = UnmannedSystem.class.getCanonicalName();
+            unmannedConfig.serialNumber = UUID.randomUUID().toString();
 
             try {
 
