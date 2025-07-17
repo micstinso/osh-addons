@@ -1,0 +1,14 @@
+description = 'Unmanned System'
+ext.details = 'MAVLink adapter'
+
+dependencies{
+  implementation 'org.sensorhub:sensorhub-core:' + oshCoreVersion
+  implementation 'io.mavsdk:mavsdk:3.0.0'
+}
+
+osgi {
+  manifest {
+    attributes('Bundle-Vendor': 'Botts Innovative Research')
+    attributes('Bundle-Activator': 'org.sensorhub.impl.comm.mavlink2.UnmannedActivator')
+  }
+}
